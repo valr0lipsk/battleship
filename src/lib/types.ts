@@ -38,3 +38,10 @@ export interface CustomWebSocket extends WebSocket {
   playerName?: string;
   playerIndex?: string;
 }
+
+export interface Player {
+  name: string;
+  password: string;
+  index: string;
+  wins: number;
+}
