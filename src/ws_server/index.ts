@@ -6,10 +6,13 @@ import {
   Message,
   MessageType,
   RegistrationData,
+  ShotStatus,
 } from "../lib/types";
+import { GameService } from "./services/Game";
 
 const playerService = new PlayerService();
 const roomService = new RoomService();
+const gameService = new GameService();
 
 export const startWebSocketServer = (port: number) => {
   const wss = new WebSocketServer({ port }, () => {
@@ -130,6 +133,20 @@ export const startWebSocketServer = (port: number) => {
         player2: room.roomUsers[1],
       });
 
+      const player1 = {
+        ...room.roomUsers[0],
+        gameId: player1Id,
+        ships: null,
+      };
+
+      const player2 = {
+        ...room.roomUsers[1],
+        gameId: player2Id,
+        ships: null,
+      };
+
+      gameService.createGame(gameId, [player1, player2]);
+
       room.roomUsers.forEach((user, index) => {
         const playerId = index === 0 ? player1Id : player2Id;
 
@@ -205,6 +222,69 @@ export const startWebSocketServer = (port: number) => {
     }
   }
 
+  function handleAddShips(ws: CustomWebSocket, data: any): void {
+    const { gameId, ships, indexPlayer } = data;
+    console.log("Adding ships:", { gameId, ships, player: indexPlayer });
+
+    const result = gameService.addShips(gameId, indexPlayer, ships);
+    if (result) {
+      sendMessage(ws, MessageType.START_GAME, {
+        ships,
+        currentPlayerIndex: indexPlayer,
+      });
+
+      const game = gameService.getGame(gameId);
+      if (game && game.players.every((p) => p.ships)) {
+        broadcast(MessageType.TURN, {
+          currentPlayer: game.currentTurn,
+        });
+      }
+    }
+  }
+
+  function handleAttack(ws: CustomWebSocket, data: any): void {
+    const { gameId, x, y, indexPlayer } = data;
+    console.log("Processing attack:", { gameId, x, y, player: indexPlayer });
+
+    const result = gameService.processAttack(gameId, indexPlayer, x, y);
+    if (result) {
+      broadcast(MessageType.ATTACK, {
+        position: result.position,
+        currentPlayer: result.currentPlayer,
+        status: result.status,
+      });
+
+      const winner = gameService.isGameFinished(gameId);
+      if (winner) {
+        broadcast(MessageType.FINISH, {
+          winPlayer: winner,
+        });
+
+        playerService.incrementWins(winner);
+        const winners = playerService.getWinners();
+        broadcast(MessageType.UPDATE_WINNERS, winners);
+      } else if (result.status === ShotStatus.MISS) {
+        broadcast(MessageType.TURN, {
+          currentPlayer: gameService.getCurrentPlayer(gameId),
+        });
+      }
+    }
+  }
+
+  function handleRandomAttack(ws: CustomWebSocket, data: any): void {
+    const { gameId, indexPlayer } = data;
+    console.log("Processing random attack:", { gameId, player: indexPlayer });
+
+    const position = gameService.getRandomAttackPosition(gameId, indexPlayer);
+    if (position) {
+      handleAttack(ws, {
+        gameId,
+        indexPlayer,
+        ...position,
+      });
+    }
+  }
+
   function handleMessage(ws: CustomWebSocket, message: Message): void {
     console.log("Processing message:", message);
 
@@ -219,6 +299,18 @@ export const startWebSocketServer = (port: number) => {
 
       case MessageType.ADD_USER_TO_ROOM:
         handleJoinRoom(ws, message.data);
+        break;
+
+      case MessageType.ADD_SHIPS:
+        handleAddShips(ws, message.data);
+        break;
+
+      case MessageType.ATTACK:
+        handleAttack(ws, message.data);
+        break;
+
+      case MessageType.RANDOM_ATTACK:
+        handleRandomAttack(ws, message.data);
         break;
 
       default:

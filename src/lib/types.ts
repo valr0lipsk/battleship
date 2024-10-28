@@ -46,7 +46,7 @@ export interface Player {
   wins: number;
 }
 
-interface RoomUser {
+export interface RoomUser {
   name: string;
   index: string;
 }
@@ -60,4 +60,34 @@ export interface PlayerServiceResponse {
   success: boolean;
   player?: Player;
   error?: string;
+}
+
+export interface Ship {
+  position: {
+    x: number;
+    y: number;
+  };
+  direction: boolean; // true - вертикальный, false - горизонтальный
+  length: number;
+  type: "small" | "medium" | "large" | "huge";
+}
+
+export interface GamePlayer {
+  index: string; // индекс игрока
+  gameId: string; // id игрока в конкретной игре
+  ships: Ship[] | null;
+}
+
+export interface Game {
+  id: string;
+  players: GamePlayer[];
+  currentTurn: string; // gameId текущего игрока
+  board1: number[][]; // доска первого игрока
+  board2: number[][]; // доска второго игрока
+}
+
+export enum ShotStatus {
+  MISS = "miss",
+  SHOT = "shot",
+  KILLED = "killed",
 }
