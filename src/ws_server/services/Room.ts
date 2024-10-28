@@ -1,11 +1,9 @@
 import { Room } from "../../lib/types";
 
 export class RoomService {
-  private rooms: Map<string, Room>;
+  private static rooms: Map<string, Room> = new Map();
 
-  constructor() {
-    this.rooms = new Map();
-  }
+  constructor() {}
 
   createRoom(playerName: string, playerIndex: string): Room {
     const roomId = Math.random().toString(36).substr(2, 9);
@@ -19,7 +17,8 @@ export class RoomService {
       ],
     };
 
-    this.rooms.set(roomId, room);
+    RoomService.rooms.set(roomId, room);
+    console.log("Created room:", room);
     return room;
   }
 
@@ -28,30 +27,60 @@ export class RoomService {
     playerName: string,
     playerIndex: string
   ): Room | null {
-    const room = this.rooms.get(roomId);
-    if (!room) return null;
+    const room = RoomService.rooms.get(roomId);
+    if (!room) {
+      console.log("Room not found:", roomId);
+      return null;
+    }
 
-    if (room.roomUsers.length >= 2) return null;
+    const isPlayerInRoom = room.roomUsers.some(
+      (user) => user.index === playerIndex
+    );
+    if (isPlayerInRoom) {
+      console.log("Player already in room:", playerName);
+      return null;
+    }
+
+    if (room.roomUsers.length >= 2) {
+      console.log("Room is full:", room);
+      return null;
+    }
 
     room.roomUsers.push({
       name: playerName,
       index: playerIndex,
     });
 
+    console.log("Added user to room:", room);
+
     if (room.roomUsers.length === 2) {
-      this.rooms.delete(roomId);
+      console.log("Room is now full, deleting:", room);
+      RoomService.rooms.delete(roomId);
     }
 
     return room;
   }
 
   getRooms(): Room[] {
-    return Array.from(this.rooms.values()).filter(
+    const rooms = Array.from(RoomService.rooms.values()).filter(
       (room) => room.roomUsers.length === 1
     );
+    console.log("Getting available rooms:", rooms);
+    return rooms;
   }
 
   deleteRoom(roomId: string): void {
-    this.rooms.delete(roomId);
+    RoomService.rooms.delete(roomId);
+    console.log("Deleted room:", roomId);
+  }
+
+  getRoom(roomId: string): Room | undefined {
+    return RoomService.rooms.get(roomId);
+  }
+
+  isPlayerInAnyRoom(playerIndex: string): boolean {
+    return Array.from(RoomService.rooms.values()).some((room) =>
+      room.roomUsers.some((user) => user.index === playerIndex)
+    );
   }
 }

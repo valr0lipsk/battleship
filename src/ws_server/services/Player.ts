@@ -1,50 +1,63 @@
-import { Player, RegistrationData } from "../../lib/types";
+import { Player, PlayerServiceResponse } from "../../lib/types";
 
 export class PlayerService {
-  private players: Map<string, Player>;
+  private static players: Map<string, Player> = new Map();
 
-  constructor() {
-    this.players = new Map();
-  }
+  constructor() {}
 
-  registerPlayer(data: RegistrationData): {
-    success: boolean;
-    player?: Player;
-    error?: string;
-  } {
+  registerPlayer(data: {
+    name: string;
+    password: string;
+  }): PlayerServiceResponse {
     const { name, password } = data;
 
     if (!name || !password) {
       return { success: false, error: "Name and password are required" };
     }
+    console.log("Registering player:", name);
 
-    for (const [_, player] of this.players) {
-      if (player.name === name) {
-        if (player.password === password) {
-          return { success: true, player };
-        } else {
-          return { success: false, error: "Invalid password" };
-        }
+    const existingPlayer = Array.from(PlayerService.players.values()).find(
+      (player) => player.name === name
+    );
+
+    if (existingPlayer) {
+      if (existingPlayer.password === password) {
+        console.log("Player logged in:", existingPlayer);
+        return {
+          success: true,
+          player: existingPlayer,
+        };
+      } else {
+        console.log("Wrong password for player:", name);
+        return {
+          success: false,
+          error: "Invalid password",
+        };
       }
     }
 
     const newPlayer: Player = {
       name,
       password,
-      index: this.generatePlayerIndex(),
+      index: Math.random().toString(36).substring(2, 9),
       wins: 0,
     };
 
-    this.players.set(newPlayer.index, newPlayer);
-    return { success: true, player: newPlayer };
+    PlayerService.players.set(newPlayer.index, newPlayer);
+    console.log("New player registered:", newPlayer);
+
+    return {
+      success: true,
+      player: newPlayer,
+    };
   }
 
   getPlayerByIndex(index: string): Player | undefined {
-    return this.players.get(index);
+    return PlayerService.players.get(index);
   }
 
   getWinners(): Array<{ name: string; wins: number }> {
-    return Array.from(this.players.values())
+    return Array.from(PlayerService.players.values())
       .map((player) => ({
         name: player.name,
         wins: player.wins,
@@ -53,13 +66,14 @@ export class PlayerService {
   }
 
   incrementWins(playerIndex: string): void {
-    const player = this.players.get(playerIndex);
+    const player = PlayerService.players.get(playerIndex);
     if (player) {
       player.wins += 1;
+      console.log("Incremented wins for player:", player);
     }
   }
 
-  private generatePlayerIndex(): string {
-    return Math.random().toString(36).substring(2, 9);
+  getAllPlayers(): Player[] {
+    return Array.from(PlayerService.players.values());
   }
 }

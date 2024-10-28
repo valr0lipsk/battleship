@@ -89,6 +89,11 @@ export const startWebSocketServer = (port: number) => {
       return;
     }
 
+    if (roomService.isPlayerInAnyRoom(ws.playerIndex)) {
+      console.log("Player already in room:", ws.playerName);
+      return;
+    }
+
     const room = roomService.createRoom(ws.playerName, ws.playerIndex);
 
     const rooms = roomService.getRooms().map((room) => ({
@@ -100,7 +105,7 @@ export const startWebSocketServer = (port: number) => {
   }
 
   function handleJoinRoom(ws: CustomWebSocket, data: any): void {
-    console.log("Player joining room:", data);
+    console.log("Player joining room:", { player: ws.playerName, data });
 
     if (!ws.playerName || !ws.playerIndex) {
       console.error("Player not registered");
@@ -119,10 +124,16 @@ export const startWebSocketServer = (port: number) => {
       const player1Id = Math.random().toString(36).substr(2, 9);
       const player2Id = Math.random().toString(36).substr(2, 9);
 
+      console.log("Starting game:", {
+        gameId,
+        player1: room.roomUsers[0],
+        player2: room.roomUsers[1],
+      });
+
       room.roomUsers.forEach((user, index) => {
         const playerId = index === 0 ? player1Id : player2Id;
 
-        Array.from(wss.clients).forEach((client: CustomWebSocket) => {
+        wss.clients.forEach((client: CustomWebSocket) => {
           if (client.playerIndex === user.index) {
             sendMessage(client, MessageType.CREATE_GAME, {
               idGame: gameId,
@@ -201,12 +212,15 @@ export const startWebSocketServer = (port: number) => {
       case MessageType.REGISTRATION:
         handleRegistration(ws, message.data as RegistrationData);
         break;
+
       case MessageType.CREATE_ROOM:
         handleCreateRoom(ws);
         break;
+
       case MessageType.ADD_USER_TO_ROOM:
         handleJoinRoom(ws, message.data);
         break;
+
       default:
         console.log("Unknown message type:", message.type);
     }

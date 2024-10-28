@@ -46,10 +46,18 @@ export interface Player {
   wins: number;
 }
 
+interface RoomUser {
+  name: string;
+  index: string;
+}
+
 export interface Room {
   id: string;
-  roomUsers: Array<{
-    name: string;
-    index: string;
-  }>;
+  roomUsers: RoomUser[];
+}
+
+export interface PlayerServiceResponse {
+  success: boolean;
+  player?: Player;
+  error?: string;
 }
