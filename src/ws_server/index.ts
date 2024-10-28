@@ -1,15 +1,5 @@
-import { WebSocketServer, WebSocket, RawData } from "ws";
-
-interface Message {
-  type: string;
-  data: any;
-  id: number;
-}
-
-interface CustomWebSocket extends WebSocket {
-  id?: string;
-  username?: string;
-}
+import { WebSocketServer, RawData } from "ws";
+import { CustomWebSocket, Message } from "../lib/types";
 
 export const startWebSocketServer = (port: number) => {
   const wss = new WebSocketServer({ port }, () => {
