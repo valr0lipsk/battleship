@@ -45,3 +45,11 @@ export interface Player {
   index: string;
   wins: number;
 }
+
+export interface Room {
+  id: string;
+  roomUsers: Array<{
+    name: string;
+    index: string;
+  }>;
+}

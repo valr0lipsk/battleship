@@ -18,10 +18,8 @@ export class PlayerService {
       return { success: false, error: "Name and password are required" };
     }
 
-    // Проверяем существующего игрока
     for (const [_, player] of this.players) {
       if (player.name === name) {
-        // Если игрок существует, проверяем пароль
         if (player.password === password) {
           return { success: true, player };
         } else {
@@ -30,7 +28,6 @@ export class PlayerService {
       }
     }
 
-    // Создаем нового игрока
     const newPlayer: Player = {
       name,
       password,
