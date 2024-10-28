@@ -254,13 +254,13 @@ export const startWebSocketServer = (port: number) => {
         status: result.status,
       });
 
-      const winner = gameService.isGameFinished(gameId);
-      if (winner) {
+      const res = gameService.isGameFinished(gameId);
+      if (res?.winner) {
         broadcast(MessageType.FINISH, {
-          winPlayer: winner,
+          winPlayer: res.winner,
         });
 
-        playerService.incrementWins(winner);
+        playerService.incrementWins(res.index);
         const winners = playerService.getWinners();
         broadcast(MessageType.UPDATE_WINNERS, winners);
       } else if (result.status === ShotStatus.MISS) {

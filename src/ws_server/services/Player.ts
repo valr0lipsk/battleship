@@ -66,6 +66,7 @@ export class PlayerService {
   }
 
   incrementWins(playerIndex: string): void {
+    console.log(PlayerService.players.values());
     const player = PlayerService.players.get(playerIndex);
     if (player) {
       player.wins += 1;

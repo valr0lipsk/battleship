@@ -115,15 +115,20 @@ export class GameService {
     return availableCells[randomIndex];
   }
 
-  isGameFinished(gameId: string): string | null {
+  isGameFinished(gameId: string) {
     const game = GameService.games.get(gameId);
     if (!game) return null;
 
     const allShipsKilled1 = this.areAllShipsKilled(game.board1);
-    if (allShipsKilled1) return game.players[1].gameId;
+    console.log("PLAYERS", game.players);
+    if (allShipsKilled1) {
+      return { winner: game.players[1].gameId, index: game.players[1].index };
+    }
 
     const allShipsKilled2 = this.areAllShipsKilled(game.board2);
-    if (allShipsKilled2) return game.players[0].gameId;
+    if (allShipsKilled2) {
+      return { winner: game.players[0].gameId, index: game.players[0].index };
+    }
 
     return null;
   }
