@@ -77,4 +77,21 @@ export class PlayerService {
   getAllPlayers(): Player[] {
     return Array.from(PlayerService.players.values());
   }
+
+  createBot(): Player {
+    const botName = "Bot";
+    const botIndex = "bot_" + Math.random().toString(36).substring(2, 9);
+
+    const bot: Player = {
+      name: botName,
+      password: "bot",
+      index: botIndex,
+      wins: 0,
+    };
+
+    PlayerService.players.set(botIndex, bot);
+    console.log("Created bot player:", bot);
+
+    return bot;
+  }
 }

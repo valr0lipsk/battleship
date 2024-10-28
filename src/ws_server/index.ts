@@ -285,6 +285,111 @@ export const startWebSocketServer = (port: number) => {
     }
   }
 
+  function handleSinglePlay(ws: CustomWebSocket): void {
+    console.log("Starting single play game for player:", ws.playerName);
+
+    if (!ws.playerName || !ws.playerIndex) {
+      console.error("Player not registered");
+      return;
+    }
+
+    if (roomService.isPlayerInAnyRoom(ws.playerIndex)) {
+      console.log("Player already in room:", ws.playerName);
+      return;
+    }
+
+    const room = roomService.createRoom(ws.playerName, ws.playerIndex);
+
+    const bot = playerService.createBot();
+
+    const updatedRoom = roomService.addUserToRoom(room.id, bot.name, bot.index);
+
+    if (updatedRoom) {
+      const gameId = Math.random().toString(36).substr(2, 9);
+      const player1Id = Math.random().toString(36).substr(2, 9);
+      const botPlayerId = "bot_" + Math.random().toString(36).substr(2, 9);
+
+      console.log("Starting single play game:", {
+        gameId,
+        player1: updatedRoom.roomUsers[0],
+        bot: updatedRoom.roomUsers[1],
+      });
+
+      const player1 = {
+        ...updatedRoom.roomUsers[0],
+        gameId: player1Id,
+        ships: null,
+      };
+
+      const botPlayer = {
+        ...updatedRoom.roomUsers[1],
+        gameId: botPlayerId,
+        ships: null,
+      };
+
+      const game = gameService.createGame(gameId, [player1, botPlayer]);
+
+      sendMessage(ws, MessageType.CREATE_GAME, {
+        idGame: gameId,
+        idPlayer: player1Id,
+      });
+
+      const botShips = gameService.generateBotShips();
+      gameService.addShips(gameId, botPlayerId, botShips);
+
+      const rooms = roomService.getRooms().map((room) => ({
+        roomId: room.id,
+        roomUsers: room.roomUsers,
+      }));
+      broadcast(MessageType.UPDATE_ROOM, rooms);
+    }
+  }
+
+  function handleBotTurn(gameId: string, botPlayerId: string): void {
+    setTimeout(() => {
+      const position = gameService.getRandomAttackPosition(gameId, botPlayerId);
+      if (position) {
+        const result = gameService.processAttack(
+          gameId,
+          botPlayerId,
+          position.x,
+          position.y
+        );
+
+        if (result) {
+          broadcast(MessageType.ATTACK, {
+            position: result.position,
+            currentPlayer: result.currentPlayer,
+            status: result.status,
+          });
+
+          const res = gameService.isGameFinished(gameId);
+          if (res?.winner) {
+            broadcast(MessageType.FINISH, {
+              winPlayer: res.winner,
+            });
+
+            const winnerPlayer = gameService
+              .getGame(gameId)
+              ?.players.find((p) => p.gameId === res.winner);
+
+            if (winnerPlayer) {
+              playerService.incrementWins(winnerPlayer.index);
+              const winners = playerService.getWinners();
+              broadcast(MessageType.UPDATE_WINNERS, winners);
+            }
+          } else if (result.status === ShotStatus.MISS) {
+            broadcast(MessageType.TURN, {
+              currentPlayer: gameService.getCurrentPlayer(gameId),
+            });
+          } else {
+            handleBotTurn(gameId, botPlayerId);
+          }
+        }
+      }
+    }, 1000);
+  }
+
   function handleMessage(ws: CustomWebSocket, message: Message): void {
     console.log("Processing message:", message);
 
@@ -307,10 +412,21 @@ export const startWebSocketServer = (port: number) => {
 
       case MessageType.ATTACK:
         handleAttack(ws, message.data);
+
+        const game = gameService.getGame(message.data.gameId);
+        console.log(game);
+        if (game && game.currentTurn.startsWith("bot_")) {
+          console.log("bot");
+          handleBotTurn(message.data.gameId, game.currentTurn);
+        }
         break;
 
       case MessageType.RANDOM_ATTACK:
         handleRandomAttack(ws, message.data);
+        break;
+
+      case MessageType.SINGLE_PLAY:
+        handleSinglePlay(ws);
         break;
 
       default:

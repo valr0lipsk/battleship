@@ -13,6 +13,7 @@ export enum MessageType {
   START_GAME = "start_game",
   TURN = "turn",
   FINISH = "finish",
+  SINGLE_PLAY = "single_play",
 }
 
 export interface RegistrationData {
@@ -67,23 +68,23 @@ export interface Ship {
     x: number;
     y: number;
   };
-  direction: boolean; // true - вертикальный, false - горизонтальный
+  direction: boolean;
   length: number;
   type: "small" | "medium" | "large" | "huge";
 }
 
 export interface GamePlayer {
-  index: string; // индекс игрока
-  gameId: string; // id игрока в конкретной игре
+  index: string;
+  gameId: string;
   ships: Ship[] | null;
 }
 
 export interface Game {
   id: string;
   players: GamePlayer[];
-  currentTurn: string; // gameId текущего игрока
-  board1: number[][]; // доска первого игрока
-  board2: number[][]; // доска второго игрока
+  currentTurn: string;
+  board1: number[][];
+  board2: number[][];
 }
 
 export enum ShotStatus {

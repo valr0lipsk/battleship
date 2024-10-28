@@ -214,6 +214,7 @@ export class GameService {
       }
     });
   }
+
   private areAllShipsKilled(board: number[][]): boolean {
     for (let y = 0; y < this.BOARD_SIZE; y++) {
       for (let x = 0; x < this.BOARD_SIZE; x++) {
@@ -230,5 +231,90 @@ export class GameService {
   getCurrentPlayer(gameId: string): string | null {
     const game = GameService.games.get(gameId);
     return game ? game.currentTurn : null;
+  }
+
+  generateBotShips(): Ship[] {
+    const ships: Ship[] = [];
+    const board = Array(this.BOARD_SIZE)
+      .fill(null)
+      .map(() => Array(this.BOARD_SIZE).fill(0));
+
+    const shipConfigs = [
+      { type: "huge", length: 4, count: 1 },
+      { type: "large", length: 3, count: 2 },
+      { type: "medium", length: 2, count: 3 },
+      { type: "small", length: 1, count: 4 },
+    ];
+
+    for (const config of shipConfigs) {
+      for (let i = 0; i < config.count; i++) {
+        let placed = false;
+        while (!placed) {
+          const direction = Math.random() < 0.5;
+          const x = Math.floor(Math.random() * this.BOARD_SIZE);
+          const y = Math.floor(Math.random() * this.BOARD_SIZE);
+
+          if (this.canPlaceShip(board, x, y, config.length, direction)) {
+            ships.push({
+              position: { x, y },
+              direction,
+              length: config.length,
+              type: config.type as "small" | "medium" | "large" | "huge",
+            });
+
+            this.markShipOnBoard(board, x, y, config.length, direction);
+            placed = true;
+          }
+        }
+      }
+    }
+
+    return ships;
+  }
+
+  private canPlaceShip(
+    board: number[][],
+    x: number,
+    y: number,
+    length: number,
+    direction: boolean
+  ): boolean {
+    if (direction) {
+      if (y + length > this.BOARD_SIZE) return false;
+    } else {
+      if (x + length > this.BOARD_SIZE) return false;
+    }
+
+    for (let dy = -1; dy <= (direction ? length : 1); dy++) {
+      for (let dx = -1; dx <= (direction ? 1 : length); dx++) {
+        const newY = y + dy;
+        const newX = x + dx;
+        if (
+          newY >= 0 &&
+          newY < this.BOARD_SIZE &&
+          newX >= 0 &&
+          newX < this.BOARD_SIZE &&
+          board[newY][newX] !== 0
+        ) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
+  private markShipOnBoard(
+    board: number[][],
+    x: number,
+    y: number,
+    length: number,
+    direction: boolean
+  ): void {
+    for (let i = 0; i < length; i++) {
+      const shipX = direction ? x : x + i;
+      const shipY = direction ? y + i : y;
+      board[shipY][shipX] = 1;
+    }
   }
 }
